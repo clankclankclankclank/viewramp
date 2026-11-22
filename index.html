@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Viewramp</title>
+  <link rel="stylesheet" href="tracker.css">
+  <link rel="stylesheet" href="retention.css">
+  <script defer src="csv.js"></script>
+  <script defer src="samples.js"></script>
+  <script defer src="retention.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Viewramp</h1>
+    <p>Compare video performance and review where viewers drop off.</p>
+    <div class="actions">
+      <label class="upload specular">Import CSVs<input type="file" id="files" accept=".csv,text/csv" multiple></label>
+      <button class="link-button" type="button" id="sample">Load anonymous sample</button>
+    </div>
+    <p class="format">Use YouTube Studio table and totals exports, or a CSV with timestamp and audience retention (%). Files are processed in this browser.</p>
+    <details class="export-guide">
+      <summary>How to export a CSV from YouTube Studio</summary>
+      <ol>
+        <li>Open <a href="https://studio.youtube.com/">YouTube Studio</a> and select <strong>Analytics</strong> or <strong>Insights</strong>.</li>
+        <li>Open the report you want and click <strong>Advanced Mode</strong> or <strong>See more</strong>.</li>
+        <li>Set your date range. For video comparisons, use the content breakdown and include views, watch time, subscribers, and thumbnail metrics.</li>
+        <li>Choose <strong>Export current view</strong> and select CSV. Unzip the download if needed, then import <strong>Table data.csv</strong> for video metrics and <strong>Totals.csv</strong> for daily views.</li>
+      </ol>
+      <p>For a retention curve, import a separate CSV with <code>Timestamp</code> and <code>Audience retention (%)</code> columns. <a href="https://support.google.com/youtube/answer/9717005">YouTube’s Advanced Mode guide</a></p>
+    </details>
+    <p id="status" class="thought-line" role="status"></p>
+    <section id="overview" class="section-rule" hidden>
+      <h2>Channel overview</h2>
+      <dl class="metrics bento" id="metrics"></dl>
+      <section id="daily-section" class="section-rule" hidden>
+        <h2>Daily views</h2>
+        <div id="daily" class="daily-bars" aria-label="Daily views chart"></div>
+        <p id="day-detail" class="format" role="status"></p>
+      </section>
+      <section id="videos-section" class="section-rule" hidden>
+        <div class="filters">
+          <h2>Videos</h2>
+          <label>Search <input id="search" type="search" placeholder="Video title"></label>
+          <label>Sort <select class="glide-select" id="sort"><option value="views">Views</option><option value="viewed">Avg. viewed estimate</option><option value="hours">Watch time</option><option value="ctr">Impressions CTR</option></select></label>
+        </div>
+        <p class="format">Average viewed is estimated from views, watch time, and video length. Replays can put it above 100%.</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Video performance">
+          <table>
+            <thead><tr><th scope="col">Video</th><th scope="col">Views</th><th scope="col">Watch time</th><th scope="col">Avg. viewed</th><th scope="col">CTR</th><th scope="col">Net subs</th></tr></thead>
+            <tbody id="videos"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+    <section id="curves" class="section-rule" hidden>
+      <div class="filters">
+        <h2>Audience retention</h2>
+        <label>First video <select class="glide-select" id="curve-a"></select></label>
+        <label>Compare with <select class="glide-select" id="curve-b"></select></label>
+      </div>
+      <p class="format">Compare retention at the same elapsed time. Add notes for hooks, topic changes, or other moments.</p>
+      <canvas id="curve-chart" role="img" aria-label="Viewer retention by elapsed time"></canvas>
+      <p id="curve-detail" role="status" class="format"></p>
+      <form id="note-form" class="actions">
+        <label>Time in seconds <input id="note-time" type="number" min="0" step="any" required></label>
+        <label>Note <input id="note-text" maxlength="160" required></label>
+        <button class="specular" type="submit">Add note</button>
+      </form>
+      <ul id="notes" class="bars"></ul>
+      <details><summary>View retention values</summary><div id="curve-values" class="table-scroll"></div></details>
+    </section>
+  </main>
+</body>
+</html>
