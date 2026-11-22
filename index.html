@@ -4,15 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Viewramp</title>
+  <link rel="icon" href="brand-mark.png" type="image/png">
   <link rel="stylesheet" href="tracker.css">
   <link rel="stylesheet" href="retention.css">
   <script defer src="csv.js"></script>
   <script defer src="samples.js"></script>
   <script defer src="retention.js"></script>
+  <style>
+    .project-brand-heading { display: flex; align-items: center; gap: .35em; }
+    .project-brand-mark {
+      display: inline-block;
+      flex: none;
+      width: 1em;
+      height: 1em;
+      background: var(--accent);
+      -webkit-mask: url("brand-mark.png") center / contain no-repeat;
+      mask: url("brand-mark.png") center / contain no-repeat;
+    }
+    @media (forced-colors: active) { .project-brand-mark { background: CanvasText; forced-color-adjust: none; } }
+  </style>
 </head>
 <body>
   <main>
-    <h1>Viewramp</h1>
+    <h1 class="project-brand-heading"><span class="project-brand-mark" aria-hidden="true"></span>Viewramp</h1>
     <p>Compare video performance and review where viewers drop off.</p>
     <div class="actions">
       <label class="upload specular">Import CSVs<input type="file" id="files" accept=".csv,text/csv" multiple></label>
