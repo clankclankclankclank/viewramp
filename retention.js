@@ -192,13 +192,17 @@ function renderCurves() {
 
 async function importExports(files) {
   const version = ++importVersion;
-  $('status').textContent = 'Reading analytics exports…';
-  await new Promise(resolve => window.setTimeout(resolve, 120));
+  const progress = $('import-progress');
+  progress.hidden = false;
+  $('status').textContent = '';
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  await new Promise(resolve => window.setTimeout(resolve, reduceMotion ? 0 : 650));
   const results = await Promise.all(files.map(async file => {
     try { return {data: parseExport(await file.text(), file.name)}; }
     catch (error) { return {error: file.name + ' — ' + error.message}; }
   }));
   if (version !== importVersion) return;
+  progress.hidden = true;
   let loaded = 0;
   const errors = [];
   for (const result of results) {

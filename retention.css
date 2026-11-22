@@ -27,3 +27,12 @@
 .export-guide { margin: .8rem 0 1rem; color: var(--muted); font-size: .875rem; }
 .export-guide summary { cursor: pointer; color: var(--accent); }
 .export-guide li + li { margin-top: .3rem; }
+
+.lattice-status { display: flex; align-items: center; gap: .65rem; }
+.lattice-status[hidden] { display: none; }
+.lattice { display: inline-grid; grid-template-columns: repeat(3, 4px); gap: 2px; color: var(--accent); }
+.lattice i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .38; }
+@media (prefers-reduced-motion: no-preference) {
+  .lattice i { animation: lattice-orbit .81s linear infinite; animation-delay: calc(var(--step) * 90ms - 810ms); }
+  @keyframes lattice-orbit { 0%, 14% { opacity: 1; } 36%, 100% { opacity: .18; } }
+}
