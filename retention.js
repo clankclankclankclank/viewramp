@@ -235,6 +235,9 @@ function renderOverview() {
     card.append(element('dt', name), element('dd', format(value) + suffix));
     return card;
   }));
+  renderAnimatedGraph($('daily-line'), [
+    {label:'Daily views', color:'#ff6962', values:daily.map(day => day.views)}
+  ], format);
   const peak = daily.reduce((max, day) => Math.max(max, day.views), 1);
   $('daily').replaceChildren(...daily.map(day => {
     const detail = day.date + ' · ' + format(day.views) + ' views';

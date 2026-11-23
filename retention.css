@@ -36,3 +36,11 @@
   .lattice i { animation: lattice-orbit .81s linear infinite; animation-delay: calc(var(--step) * 90ms - 810ms); }
   @keyframes lattice-orbit { 0%, 14% { opacity: 1; } 36%, 100% { opacity: .18; } }
 }
+
+#videos-section [aria-label="Video performance"] th,
+#videos-section [aria-label="Video performance"] td { text-align: left; vertical-align: middle; }
+#videos-section [aria-label="Video performance"] th:not(:first-child),
+#videos-section [aria-label="Video performance"] td:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

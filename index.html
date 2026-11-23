@@ -6,13 +6,15 @@
   <title>Viewramp</title>
   <link rel="icon" href="brand-mark.png?v=2" type="image/png">
   <link rel="stylesheet" href="tracker.css">
-  <link rel="stylesheet" href="retention.css">
+  <link rel="stylesheet" href="retention.css?v=2">
   <script defer src="fuse-button.js"></script>
   <script defer src="csv.js"></script>
   <script defer src="samples.js?v=4"></script>
-  <script defer src="retention.js?v=5"></script>
+  <script defer src="animated-graph.js"></script>
+  <script defer src="retention.js?v=6"></script>
   <link rel="stylesheet" href="fuse-button.css">
   <script defer src="directional-cursor.js"></script>
+  <style>.animated-graph { display:block; width:100%; height:clamp(9rem,27vw,16rem); margin:.6rem 0 1rem; } .animated-graph[hidden] { display:none; }</style>
 </head>
 <body>
   <main>
@@ -40,8 +42,8 @@
       <dl class="metrics bento" id="metrics"></dl>
       <section id="daily-section" class="section-rule" hidden>
         <h2>Daily views</h2>
-        <div id="daily" class="daily-bars" aria-label="Daily views chart"></div>
-        <p id="day-detail" class="format" role="status"></p>
+        <canvas id="daily-line" class="animated-graph" role="img"></canvas>
+        <details><summary>Daily values</summary><div id="daily" class="daily-bars" aria-label="Daily views chart"></div><p id="day-detail" class="format" role="status"></p></details>
       </section>
       <section id="videos-section" class="section-rule" hidden>
         <div class="filters">
