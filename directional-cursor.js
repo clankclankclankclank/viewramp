@@ -45,7 +45,7 @@ const shortestArc = (from, to) => Math.atan2(Math.sin(to - from), Math.cos(to - 
         turnVelocity = (turnVelocity - 16 * impulse * step) * decay;
       }
       zoom += ((pressed && !motion.matches ? .88 : 1) - zoom) * pressEase;
-      canvas.style.transform = `translate3d(${x - 24}px,${y - 24}px,0) rotate(${angle}rad) scale(${zoom})`;
+      canvas.style.transform = `translate3d(${x - 24}px,${y - 24}px,0) rotate(${angle}rad) scale(${zoom * .5})`;
       ctx.clearRect(0, 0, size, size);
       ctx.save();
       ctx.translate(24, 24);
