@@ -1,3 +1,18 @@
+const offerUndo = createFuseUndo();
+function rememberViewramp() {
+  const previous = structuredClone({datasets, notes: [...annotations]});
+  return () => {
+    ++importVersion;
+    Object.assign(datasets, previous.datasets);
+    annotations.clear();
+    for (const [name, notes] of previous.notes) annotations.set(name, notes);
+    saveNotes();
+    $('import-progress').hidden = true;
+    renderOverview();
+    setCurveMenus();
+    $('status').textContent = 'Change undone.';
+  };
+}
 const $ = id => document.getElementById(id);
 const number = new Intl.NumberFormat('en', {maximumFractionDigits: 2});
 const format = value => value == null ? '—' : number.format(value);
@@ -258,7 +273,7 @@ function renderCurves() {
     const remove = element('button', 'Remove');
     remove.type = 'button';
     remove.className = 'link-button';
-    remove.onclick = () => { notes.splice(index, 1); saveNotes(); renderCurves(); };
+    remove.onclick = () => { const restore = rememberViewramp(); notes.splice(index, 1); saveNotes(); renderCurves(); offerUndo(restore); };
     row.append(remove);
     return row;
   }));
@@ -289,6 +304,7 @@ async function importExports(files) {
   }));
   if (version !== importVersion) return;
   progress.hidden = true;
+  const restore = rememberViewramp();
   let loaded = 0;
   const errors = [];
   for (const result of results) {
@@ -298,6 +314,7 @@ async function importExports(files) {
     Object.assign(datasets, overview);
     loaded++;
   }
+  if (loaded) offerUndo(restore);
   $('status').textContent = (loaded ? 'Loaded ' + loaded + ' ' + (loaded === 1 ? 'export. ' : 'exports. ') : '') + errors.join(' ');
   renderOverview();
   setCurveMenus();
@@ -318,11 +335,13 @@ $('note-form').onsubmit = event => {
   const name = $('curve-a').value;
   const text = $('note-text').value.trim();
   if (!text || !name) return;
+  const restore = rememberViewramp();
   const notes = annotations.get(name) ?? [];
   notes.push({seconds: Number($('note-time').value), text});
   notes.sort((a,b) => a.seconds - b.seconds);
   annotations.set(name, notes);
   saveNotes();
+  offerUndo(restore);
   event.currentTarget.reset();
   renderCurves();
 };
