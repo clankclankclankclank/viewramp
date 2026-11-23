@@ -15,11 +15,12 @@ function renderAnimatedGraph(canvas, series, formatValue) {
   high += padding;
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   let frame, start;
+  let visible = false;
   let width, height;
 
   function draw(time) {
-    start ??= time;
-    const progress = motion.matches ? 1 : Math.min(1, (time - start) / 1250);
+    if (visible) start ??= time;
+    const progress = motion.matches ? 1 : start == null ? 0 : Math.min(1, (time - start) / 1250);
     const reveal = progress * progress * (3 - 2 * progress);
     const top = 16, bottom = height - 17, left = 14, right = width - 14;
     const y = value => bottom - (value - low) / (high - low) * (bottom - top);
@@ -33,6 +34,7 @@ function renderAnimatedGraph(canvas, series, formatValue) {
       ctx.lineTo(right, level);
       ctx.stroke();
     }
+    if (!visible && !motion.matches) return;
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, left + (right - left) * reveal + 7, height);
@@ -81,12 +83,20 @@ function renderAnimatedGraph(canvas, series, formatValue) {
   }
   canvas.setAttribute('aria-label', series.map(line => line.label + ' ranges from ' +
     formatValue(Math.min(...line.values)) + ' to ' + formatValue(Math.max(...line.values))).join('. '));
+  const intersection = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.intersectionRatio >= .6)) return;
+    visible = true;
+    intersection.disconnect();
+    resize();
+  }, {threshold: .6});
+  intersection.observe(canvas);
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   const themeObserver = new MutationObserver(resize);
   themeObserver.observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
   resize();
   canvas.stopGraph = () => {
+    intersection.disconnect();
     observer.disconnect();
     themeObserver.disconnect();
     cancelAnimationFrame(frame);
