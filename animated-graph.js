@@ -1,6 +1,7 @@
 // Draw a smooth curve through the imported values without overshooting them.
 function renderAnimatedGraph(canvas, series, formatValue) {
   canvas.stopGraph?.();
+  canvas.style.borderTopColor = 'color-mix(in srgb, var(--text) 27%, transparent)';
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const values = series.flatMap(line => line.values);
@@ -23,9 +24,8 @@ function renderAnimatedGraph(canvas, series, formatValue) {
     const top = 16, bottom = height - 17, left = 14, right = width - 14;
     const y = value => bottom - (value - low) / (high - low) * (bottom - top);
     ctx.clearRect(0, 0, width, height);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = getComputedStyle(canvas).getPropertyValue('--line').trim() || '#333';
-    ctx.setLineDash([4, 5]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = getComputedStyle(canvas).borderTopColor;
     for (let i = 0; i < 5; i++) {
       const level = top + (bottom - top) * i / 4;
       ctx.beginPath();
@@ -33,7 +33,6 @@ function renderAnimatedGraph(canvas, series, formatValue) {
       ctx.lineTo(right, level);
       ctx.stroke();
     }
-    ctx.setLineDash([]);
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, left + (right - left) * reveal + 7, height);
@@ -84,9 +83,12 @@ function renderAnimatedGraph(canvas, series, formatValue) {
     formatValue(Math.min(...line.values)) + ' to ' + formatValue(Math.max(...line.values))).join('. '));
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
+  const themeObserver = new MutationObserver(resize);
+  themeObserver.observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
   resize();
   canvas.stopGraph = () => {
     observer.disconnect();
+    themeObserver.disconnect();
     cancelAnimationFrame(frame);
   };
 }
