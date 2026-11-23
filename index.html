@@ -8,8 +8,8 @@
   <link rel="stylesheet" href="tracker.css">
   <link rel="stylesheet" href="retention.css">
   <script defer src="csv.js"></script>
-  <script defer src="samples.js"></script>
-  <script defer src="retention.js"></script>
+  <script defer src="samples.js?v=3"></script>
+  <script defer src="retention.js?v=3"></script>
 </head>
 <body>
   <main>
@@ -17,7 +17,7 @@
     <p>Compare video performance and review where viewers drop off.</p>
     <div class="actions">
       <label class="upload specular">Import CSVs<input type="file" id="files" accept=".csv,text/csv" multiple></label>
-      <button class="link-button" type="button" id="sample">Load anonymous sample</button>
+      <button class="link-button" type="button" id="sample">Load sample</button>
     </div>
     <p class="format">Use YouTube Studio table and totals exports, or a CSV with timestamp and audience retention (%). Files are processed in this browser.</p>
     <details class="export-guide">
@@ -46,6 +46,19 @@
           <label>Search <input id="search" type="search" placeholder="Video title"></label>
           <label>Sort <select class="glide-select" id="sort"><option value="views">Views</option><option value="viewed">Avg. viewed estimate</option><option value="hours">Watch time</option><option value="ctr">Impressions CTR</option></select></label>
         </div>
+        <div class="actions" aria-label="Video filters">
+          <label>Length <select id="video-length"><option value="">Any length</option><option value="short">Up to 60 seconds</option><option value="medium">Over 60 seconds to 5 minutes</option><option value="long">Over 5 minutes</option></select></label>
+          <label>Published from <input id="published-from" type="date"></label>
+          <label>Published through <input id="published-to" type="date"></label>
+        </div>
+        <section class="section-rule" aria-labelledby="comparison-title">
+          <h3 id="comparison-title">Compare video performance</h3>
+          <div class="actions">
+            <label>First video <select id="compare-a"></select></label>
+            <label>Second video <select id="compare-b"></select></label>
+          </div>
+          <div class="table-scroll" id="comparison" aria-live="polite"></div>
+        </section>
         <p class="format">Average viewed is estimated from views, watch time, and video length. Replays can put it above 100%.</p>
         <div class="table-scroll" tabindex="0" role="region" aria-label="Video performance">
           <table>
@@ -69,6 +82,9 @@
         <label>Note <input id="note-text" maxlength="160" required></label>
         <button class="specular" type="submit">Add note</button>
       </form>
+      <button type="button" class="link-button" id="export-notes" disabled>Export notes</button>
+      <h3>Largest drops</h3>
+      <ul id="curve-drops" class="bars"></ul>
       <ul id="notes" class="bars"></ul>
       <details><summary>View retention values</summary><div id="curve-values" class="table-scroll"></div></details>
     </section>

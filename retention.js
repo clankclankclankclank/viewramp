@@ -3,7 +3,14 @@ const number = new Intl.NumberFormat('en', {maximumFractionDigits: 2});
 const format = value => value == null ? '—' : number.format(value);
 const norm = value => value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 const datasets = {videos: [], daily: [], curves: new Map(), total: null};
+const noteKey = 'viewramp-notes-v1';
 const annotations = new Map();
+try {
+  for (const [name, notes] of JSON.parse(localStorage.getItem(noteKey) ?? '[]')) annotations.set(name, notes);
+} catch { /* Notes are optional when storage is unavailable. */ }
+function saveNotes() {
+  try { localStorage.setItem(noteKey, JSON.stringify([...annotations])); } catch { /* Keep notes for this session. */ }
+}
 let importVersion = 0;
 
 function parseExport(text, name) {
@@ -39,7 +46,8 @@ function parseExport(text, name) {
       const views = readNumber(row, 'views');
       const hours = readNumber(row, 'watchtimehours');
       const length = readNumber(row, 'duration');
-      const entry = {title: get(row, 'videotitle'), views, hours, subs: readNumber(row, 'subscribers'),
+      const published = get(row, 'videopublishtime') || get(row, 'publishdate');
+      const entry = {length, published: parseDate(published, false) || parseDate(published.replace(/^([a-z]+) (\d{1,2}), (\d{4})$/i, '$2 $1 $3'), false) || '', title: get(row, 'videotitle'), views, hours, subs: readNumber(row, 'subscribers'),
         impressions: readNumber(row, 'thumbnailimpressions'), ctr: readNumber(row, 'thumbnailclickthroughrate'),
         viewed: views > 0 && length > 0 && hours != null ? hours * 3600 / views / length * 100 : null};
       if (get(row, 'content').toLowerCase() === 'total') total = entry;
@@ -65,14 +73,73 @@ function element(tag, text) {
 function renderVideos() {
   const query = $('search').value.toLowerCase().trim();
   const key = $('sort').value;
-  const rows = datasets.videos.filter(video => video.title.toLowerCase().includes(query))
+  const length = $('video-length').value;
+  const from = $('published-from').value;
+  const to = $('published-to').value;
+  const rows = datasets.videos.filter(video => {
+    const band = video.length == null ? '' : video.length <= 60 ? 'short' : video.length <= 300 ? 'medium' : 'long';
+    return video.title.toLowerCase().includes(query) && (!length || band === length) &&
+      (!from || (video.published && video.published >= from)) && (!to || (video.published && video.published <= to));
+  })
     .sort((a, b) => (b[key] ?? -Infinity) - (a[key] ?? -Infinity));
+  for (const [index, id] of ['compare-a', 'compare-b'].entries()) {
+    const select = $(id);
+    const previous = Number(select.value);
+    const wasSelected = select.selectedIndex !== -1;
+    select.replaceChildren(...rows.map(video => new Option(video.title, datasets.videos.indexOf(video))));
+    const retained = wasSelected ? rows.indexOf(datasets.videos[previous]) : -1;
+    select.selectedIndex = retained >= 0 ? retained : Math.min(index, rows.length - 1);
+  }
+  if (rows.length > 1 && $('compare-a').value === $('compare-b').value) {
+    $('compare-b').selectedIndex = $('compare-a').selectedIndex === 0 ? 1 : 0;
+  }
+  renderComparison();
+  if (!rows.length) {
+    const row = element('tr');
+    const message = element('td', 'No videos match these filters.');
+    message.colSpan = 6;
+    row.append(message);
+    $('videos').replaceChildren(row);
+    return;
+  }
   $('videos').replaceChildren(...rows.map(video => {
     const row = element('tr');
     for (const val of [video.title, format(video.views), format(video.hours) + (video.hours == null ? '' : ' h'),
       video.viewed == null ? '—' : format(video.viewed) + '%', video.ctr == null ? '—' : format(video.ctr) + '%', format(video.subs)]) row.append(element('td', val));
     return row;
   }));
+}
+
+function renderComparison() {
+  const table = element('table');
+  const a = datasets.videos[$('compare-a').value];
+  const b = datasets.videos[$('compare-b').value];
+  const target = $('comparison');
+  if (!a || !b || a === b) {
+    target.textContent = 'Choose two different videos to compare.';
+    return;
+  }
+  const head = table.createTHead().insertRow();
+  for (const label of ['Metric', a.title, b.title, 'Change (second − first)']) {
+    const th = element('th', label);
+    th.scope = 'col';
+    head.append(th);
+  }
+  const body = table.createTBody();
+  for (const [key, label, suffix, unit] of [
+    ['length', 'Duration', ' s'], ['views', 'Views', ''], ['hours', 'Watch time', ' h'],
+    ['viewed', 'Average viewed', '%', ' pp'], ['ctr', 'Impressions CTR', '%', ' pp'],
+    ['subs', 'Net subscribers', '']
+  ]) {
+    const row = body.insertRow();
+    const heading = element('th', label);
+    heading.scope = 'row';
+    row.append(heading);
+    for (const value of [a[key], b[key]]) row.insertCell().textContent = value == null ? '—' : format(value) + suffix;
+    const change = a[key] == null || b[key] == null ? null : b[key] - a[key];
+    row.insertCell().textContent = change == null ? '—' : (change > 0 ? '+' : '') + format(change) + (unit ?? suffix);
+  }
+  target.replaceChildren(table);
 }
 
 function renderOverview() {
@@ -106,6 +173,7 @@ function renderOverview() {
   }));
   $('day-detail').textContent = daily.length ? daily[0].date + ' to ' + daily.at(-1).date : '';
   renderVideos();
+
 }
 
 function setCurveMenus() {
@@ -166,13 +234,31 @@ function renderCurves() {
     ctx.beginPath(); ctx.moveTo(x(note.seconds), 15); ctx.lineTo(x(note.seconds), height - 25); ctx.stroke();
   }
   $('curve-detail').textContent = curves.map((curve,index) => (index ? 'Peach' : 'Red') + ' · ' + curve.name).join(' / ');
+  const drops = first.points.slice(1).map((point, i) => ({
+    point, drop: first.points[i].percent - point.percent, previous: first.points[i].seconds
+  })).filter(({point, drop, previous}) => drop > 0 && point.seconds > previous)
+    .sort((a,b) => b.drop - a.drop).slice(0, 3);
+  $('curve-drops').replaceChildren(...drops.map(({point, drop, previous}) => {
+    const item = element('li', '−' + format(drop) + ' pp from ' + format(previous) + 's to ');
+    const button = element('button', format(point.seconds) + 's');
+    button.type = 'button';
+    button.className = 'link-button';
+    button.onclick = () => {
+      $('note-time').value = point.seconds;
+      $('note-text').focus();
+    };
+    item.append(button);
+    return item;
+  }));
+  if (!drops.length) $('curve-drops').append(element('li', 'No drops in this export.'));
+  $('export-notes').disabled = !notes.length;
   $('note-time').max = first.points.at(-1).seconds;
   $('notes').replaceChildren(...notes.map((note,index) => {
     const row = element('li', format(note.seconds) + 's · ' + note.text);
     const remove = element('button', 'Remove');
     remove.type = 'button';
     remove.className = 'link-button';
-    remove.onclick = () => { notes.splice(index, 1); renderCurves(); };
+    remove.onclick = () => { notes.splice(index, 1); saveNotes(); renderCurves(); };
     row.append(remove);
     return row;
   }));
@@ -236,7 +322,21 @@ $('note-form').onsubmit = event => {
   notes.push({seconds: Number($('note-time').value), text});
   notes.sort((a,b) => a.seconds - b.seconds);
   annotations.set(name, notes);
+  saveNotes();
   event.currentTarget.reset();
   renderCurves();
+};
+for (const id of ['video-length', 'published-from', 'published-to']) $(id).onchange = renderVideos;
+for (const id of ['compare-a', 'compare-b']) $(id).onchange = renderComparison;
+$('export-notes').onclick = () => {
+  const notes = annotations.get($('curve-a').value) ?? [];
+  if (!notes.length) return;
+  const file = new Blob([notes.map(note => format(note.seconds) + 's — ' + note.text).join('\n')], {type: 'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(file);
+  const link = element('a');
+  link.href = url;
+  link.download = 'viewramp-notes.txt';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 window.addEventListener('resize', renderCurves);
