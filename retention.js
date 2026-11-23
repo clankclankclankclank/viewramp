@@ -65,6 +65,12 @@ function parseExport(text, name) {
       const entry = {length, published: parseDate(published, false) || parseDate(published.replace(/^([a-z]+) (\d{1,2}), (\d{4})$/i, '$2 $1 $3'), false) || '', title: get(row, 'videotitle'), views, hours, subs: readNumber(row, 'subscribers'),
         impressions: readNumber(row, 'thumbnailimpressions'), ctr: readNumber(row, 'thumbnailclickthroughrate'),
         viewed: views > 0 && length > 0 && hours != null ? hours * 3600 / views / length * 100 : null};
+      entry.conversion = views > 0 && entry.subs != null ? 1000 * entry.subs / views : null;
+      const time = /(?:T| )([01]\d|2[0-3]):[0-5]\d/.exec(published);
+      const zoned = time && /(?:Z|[+-]\d{2}:?\d{2})$/i.test(published) ? new Date(published) : null;
+      entry.publishHour = zoned && Number.isFinite(+zoned) ? zoned.getUTCHours() : time ? Number(time[1]) : null;
+      entry.publishDay = zoned && Number.isFinite(+zoned) ? zoned.getUTCDay()
+        : entry.published ? new Date(entry.published + 'T00:00:00Z').getUTCDay() : null;
       if (get(row, 'content').toLowerCase() === 'total') total = entry;
       else if (entry.title) videos.push(entry);
     }
@@ -109,10 +115,11 @@ function renderVideos() {
     $('compare-b').selectedIndex = $('compare-a').selectedIndex === 0 ? 1 : 0;
   }
   renderComparison();
+  renderPublishing(rows);
   if (!rows.length) {
     const row = element('tr');
     const message = element('td', 'No videos match these filters.');
-    message.colSpan = 6;
+    message.colSpan = 7;
     row.append(message);
     $('videos').replaceChildren(row);
     return;
@@ -120,9 +127,63 @@ function renderVideos() {
   $('videos').replaceChildren(...rows.map(video => {
     const row = element('tr');
     for (const val of [video.title, format(video.views), format(video.hours) + (video.hours == null ? '' : ' h'),
-      video.viewed == null ? '—' : format(video.viewed) + '%', video.ctr == null ? '—' : format(video.ctr) + '%', format(video.subs)]) row.append(element('td', val));
+      video.viewed == null ? '—' : format(video.viewed) + '%', video.ctr == null ? '—' : format(video.ctr) + '%', format(video.subs), format(video.conversion)]) row.append(element('td', val));
     return row;
   }));
+}
+
+function renderPublishing(rows) {
+  const groups = Array.from({length: 7}, () => Array.from({length: 25}, () => ({sum:0, count:0})));
+  for (const video of rows) {
+    if (video.publishDay == null || video.views == null) continue;
+    const cell = groups[video.publishDay][video.publishHour ?? 24];
+    cell.sum += video.views;
+    cell.count++;
+  }
+  const target = $('publishing-heatmap');
+  const hours = Array.from({length:25}, (_, hour) => hour)
+    .filter(hour => groups.some(day => day[hour].count));
+  if (!hours.length) target.textContent = 'No upload dates with views in this selection.';
+  else {
+    const table = element('table');
+    const heading = table.createTHead().insertRow();
+    for (const text of ['Day', ...hours.map(hour => hour === 24 ? 'Date only' : String(hour).padStart(2,'0') + ':00')]) {
+      const cell = element('th', text); cell.scope = 'col'; heading.append(cell);
+    }
+    const body = table.createTBody();
+    const maximum = Math.max(1, ...groups.flat().map(cell => cell.count ? cell.sum / cell.count : 0));
+    for (const [day, name] of ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].entries()) {
+      const row = body.insertRow();
+      const header = element('th', name); header.scope = 'row'; row.append(header);
+      for (const hour of hours) {
+        const {sum, count} = groups[day][hour];
+        const cell = row.insertCell();
+        cell.textContent = count ? format(sum / count) : '—';
+        if (count) {
+          cell.style.backgroundColor = 'rgba(255, 105, 98, ' + (.08 + .28 * sum / count / maximum) + ')';
+          cell.title = count + (count === 1 ? ' video' : ' videos');
+        }
+      }
+    }
+    target.replaceChildren(table);
+  }
+  const counted = rows.filter(video => video.views != null).sort((a,b) => a.views - b.views);
+  const list = $('video-outliers');
+  list.replaceChildren();
+  if (counted.length < 5) {
+    $('outlier-summary').textContent = 'At least five videos with views are needed.';
+    return;
+  }
+  const quantile = fraction => {
+    const index = (counted.length - 1) * fraction;
+    const low = Math.floor(index);
+    return counted[low].views + (index - low) * (counted[Math.ceil(index)].views - counted[low].views);
+  };
+  const upper = quantile(.75);
+  const threshold = upper + 1.5 * (upper - quantile(.25));
+  const outliers = counted.filter(video => video.views > threshold).reverse();
+  $('outlier-summary').textContent = (outliers.length ? 'Flagged above ' : 'No videos above ') + format(threshold) + ' views in this selection.';
+  list.append(...outliers.map(video => element('li', video.title + ' · ' + format(video.views) + ' views')));
 }
 
 function renderComparison() {
@@ -144,7 +205,7 @@ function renderComparison() {
   for (const [key, label, suffix, unit] of [
     ['length', 'Duration', ' s'], ['views', 'Views', ''], ['hours', 'Watch time', ' h'],
     ['viewed', 'Average viewed', '%', ' pp'], ['ctr', 'Impressions CTR', '%', ' pp'],
-    ['subs', 'Net subscribers', '']
+    ['subs', 'Net subscribers', ''], ['conversion', 'Net subscribers per 1K views', '']
   ]) {
     const row = body.insertRow();
     const heading = element('th', label);

@@ -10,7 +10,7 @@
   <script defer src="fuse-button.js"></script>
   <script defer src="csv.js"></script>
   <script defer src="samples.js?v=4"></script>
-  <script defer src="retention.js?v=4"></script>
+  <script defer src="retention.js?v=5"></script>
   <link rel="stylesheet" href="fuse-button.css">
 </head>
 <body>
@@ -61,10 +61,18 @@
           </div>
           <div class="table-scroll" id="comparison" aria-live="polite"></div>
         </section>
+        <section class="section-rule">
+          <h3>Publishing heatmap</h3>
+          <p class="format">Average views per video by upload weekday and hour. Timestamps with an offset use UTC. Date-only uploads appear in their own column.</p>
+          <div class="table-scroll" id="publishing-heatmap"></div>
+          <h3>High-view outliers</h3>
+          <p id="outlier-summary" class="format"></p>
+          <ul id="video-outliers"></ul>
+        </section>
         <p class="format">Average viewed is estimated from views, watch time, and video length. Replays can put it above 100%.</p>
         <div class="table-scroll" tabindex="0" role="region" aria-label="Video performance">
           <table>
-            <thead><tr><th scope="col">Video</th><th scope="col">Views</th><th scope="col">Watch time</th><th scope="col">Avg. viewed</th><th scope="col">CTR</th><th scope="col">Net subs</th></tr></thead>
+            <thead><tr><th scope="col">Video</th><th scope="col">Views</th><th scope="col">Watch time</th><th scope="col">Avg. viewed</th><th scope="col">CTR</th><th scope="col">Net subs</th><th scope="col">Net subs / 1K views</th></tr></thead>
             <tbody id="videos"></tbody>
           </table>
         </div>
